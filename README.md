@@ -28,9 +28,9 @@ Steps that will run:
 - A BLAST search will be performed with the longest contig against the Betaherpesvirinae subfamily
 
 Create sample data: 
-prefetch SRR5660033  #get from NCBI
-fastq-dump --split-files SRR5660033  #convert to Fastq file
-head -n 40000 SRR5660033_1.fastq > sample_SRR5660033_1.fastq    #contains only first 10,000 reads
-head -n 40000 SRR5660033_2.fastq > sample_SRR5660033_2.fastq    #contains only first 10,000 reads
+1. prefetch SRR5660033  #get from NCBI
+2. fastq-dump --split-files SRR5660033  #convert to Fastq file
+3. head -n 40000 SRR5660033_1.fastq > sample_SRR5660033_1.fastq    #contains only first 10,000 reads
+4. head -n 40000 SRR5660033_2.fastq > sample_SRR5660033_2.fastq    #contains only first 10,000 reads
 
 Sample Test Data: python PythonPipeline.py --input sample_SRR5660033_1.fastq --output sample_output
