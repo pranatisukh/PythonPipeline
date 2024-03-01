@@ -1,0 +1,77 @@
+####This code does not run; however, I have included my thought process for what should have happened####
+
+import os    #Import the os module to execute shell commands
+
+def retrieve_fastq_files():
+    #Download FASTQ files from SRA
+    #Download FASTQ files for different Donors
+    os.system("wget -O Donor1_2dpi.fastq 'https://www.ncbi.nlm.nih.gov/sra/SRX2896360'")        #2dpi
+    os.system("wget -O Donor1_6dpi.fastq 'https://www.ncbi.nlm.nih.gov/sra/SRX2896363'")        #6dpi
+    os.system("wget -O Donor3_2dpi.fastq 'https://www.ncbi.nlm.nih.gov/sra/SRX2896374'")        #2dpi
+    os.system("wget -O Donor3_6dpi.fastq 'https://www.ncbi.nlm.nih.gov/sra/SRX2896375'")        #6dpi
+
+def bowtie_map(input_fastq, output_sam):       #Perform the Bowtie2 mapping 
+    #Create the Bowtie2 index for HCMV genome
+    os.system("bowtie2-build NC_006273.2.fasta NC_006273.2")   #Build a reference genome sequence file in FASTA format. 
+
+    #Perform the Bowtie2 mapping to HCMV index
+    #-1 specifies first input file containing paired-end reads
+    #-2 specifies second input file containing paired-end reads
+    os.system(f"bowtie2 -x NC_006273.2 -1 {input_fastq} -2 {input_fastq} -S {output_sam}")
+
+def filter_reads(bowtie2_output_sam, output_fastq):
+    #Filter reads that are mapped to the HCMV index
+    #View SAM file
+    #-b specifies that the output should be a BAM file
+    #bam2fq converts BAM file to FASTQ file 
+    os.system(f"samtools view -b {bowtie2_output_sam} | samtools bam2fq - > {output_fastq}")
+
+def assemble_transcriptomes(input_fastq_list, output_dir):
+    #Perform assembly using SPAdes
+    #spades.py - excute spades command 
+    os.system(f"spades.py -1 {input_fastq_list[0]} -2 {input_fastq_list[1]} "
+              f"-1 {input_fastq_list[2]} -2 {input_fastq_list[3]} -o {output_dir}") #output where SPAdes will save the assembly results
+
+def contigs_over_1000bp(assembly_fasta):
+    #Count the number of contigs with length > 1000 bp
+    contigs_over_1000bp = sum(1 for line in open(assembly_fasta) if line.startswith(">") and len(next(open(assembly_fasta)).strip()) > 1000)
+    return contigs_over_1000bp
+
+def total_assembly_length(assembly_fasta):
+    # Calculate the total length of contigs > 1000 bp
+    total_length = sum(len(line.strip()) for line in open(assembly_fasta) if not line.startswith(">") and len(line.strip()) > 1000)
+    return total_length  #calculates the sum of the lengths of all sequence lines that satisfy the conditions specified 
+
+def blast_longest_contig(longest_contig_fasta, blast_db, blast_output):
+    #Perform BLAST search with the longest contig against Betaherpesvirinae subfamily
+    os.system(f"makeblastdb -in {blast_db} -dbtype nucl")  #database type: nucleotide
+    os.system(f"blastn -query {longest_contig_fasta} -db {blast_db} -out {blast_output} -num_alignments 10") #Specifies to keep only the top 10 alignments for each query sequence
+
+def main():
+    # Create a directory for output files
+    output_dir = "PipelineProject_FirstName_LastName"
+    os.makedirs(output_dir, exist_ok=True)
+    os.chdir(output_dir)
+
+    # Step 1: Retrieve FASTQ files
+    retrieve_fastq_files()
+
+    # Step 2: Bowtie2 mapping and filtering
+    bowtie_map("all_reads.fastq", "bowtie2_output.sam")
+    filter_reads("bowtie2_output.sam", "mapped_reads.fastq")
+
+    # Step 3: Assembly
+    assemble_transcriptomes(["mapped_reads.fastq"], "assembly_output")
+
+    # Step 4: Count contigs and calculate assembly length
+    contigs_count = contigs_over_1000bp("assembly_output/contigs.fasta")
+    total_length = total_assembly_length("assembly_output/contigs.fasta")
+    with open("PipelineProject.log", "a") as log_file:
+        log_file.write(f"There are {contigs_count} contigs > 1000 bp in the assembly.\n")
+        log_file.write(f"There are {total_length} bp in the assembly.\n")
+
+    # Step 5: BLAST search
+    blast_longest_contig("assembly_output/contigs.fasta", "betaherpesvirinae_db.fasta", "blast_output.txt")
+
+if __name__ == "__main__":
+    main()
