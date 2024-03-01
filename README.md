@@ -27,6 +27,10 @@ Steps that will run:
 - Number of contigs with length > 1000 bp will be counted and the total assembly length will be calculated
 - A BLAST search will be performed with the longest contig against the Betaherpesvirinae subfamily
 
-Sample Test Data: python PythonPipeline.py --input sample_data.fastq --output sample_output
+Create sample data: 
+prefetch SRR5660033  #get from NCBI
+fastq-dump --split-files SRR5660033  #convert to Fastq file
+head -n 40000 SRR5660033_1.fastq > sample_SRR5660033_1.fastq    #contains only first 10,000 reads
+head -n 40000 SRR5660033_2.fastq > sample_SRR5660033_2.fastq    #contains only first 10,000 reads
 
-
+Sample Test Data: python PythonPipeline.py --input sample_SRR5660033_1.fastq --output sample_output
